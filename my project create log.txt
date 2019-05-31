@@ -1,0 +1,410 @@
+
+######################################################################################################
+#~~~~~~~~~~~~~~   hXXps://wsvincent.com/django-rest-framework-react-tutorial/        ~~~~~~~~~~~~~~~~#
+#----------------------------------------------------------------------------------------------------#
+######################################################################################################
+
+(django1) C:\Users\yoni shavat>django-admin startproject todo_api
+
+(django1) C:\Users\yoni shavat>cd todo_api
+
+(django1) C:\Users\yoni shavat\todo_api>python manage.py startapp todos
+
+(django1) C:\Users\yoni shavat\todo_api>python manage.py migrate
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, sessions
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying sessions.0001_initial... OK
+
+(django1) C:\Users\yoni shavat\todo_api>
+
+#create the Todo model in { todo_api/todo/models.py  } #
+--------------------------------------------------------------
+from django.db import models
+
+class Todo(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+
+    def __str__(self):
+        """A string that representation the model"""
+        return self.title
+
+--------------------------------------------------------------
+
+(django1) C:\Users\yoni shavat\todo_api>python manage.py makemigrations
+Migrations for 'todos':
+  todos\migrations\0001_initial.py
+    - Create model Todo
+
+(django1) C:\Users\yoni shavat\todo_api>python manage.py migrate
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, sessions, todos
+Running migrations:
+  Applying todos.0001_initial... OK
+
+(django1) C:\Users\yoni shavat\todo_api>
+
+#registing todo model on admin page  { todo_api/todos/admin.py  } #
+--------------------------------------------------------------
+from django.contrib import admin
+
+from .models import Todo
+
+admin.site.register(Todo)
+
+--------------------------------------------------------------
+(django1) C:\Users\yoni shavat\todo_api>python manage.py createsuperuser
+Username (leave blank to use 'yonishavat'): admin
+Email address: yshavat89@gmail.com
+Password:adminadmin
+Password (again):adminadmin
+Superuser created successfully.
+
+(django1) C:\Users\yoni shavat\todo_api>
+
+#creating tests for todo model { todo_api/todos/tests.py  } #
+--------------------------------------------------------------
+from django.test import TestCase
+from .models import Todo
+
+class TodoModelTest(TestCase):
+    
+    @classmethod
+    def setUpTestData(cls):
+        Todo.objects.create(title='first todo')
+        Todo.objects.create(description='a description here')
+    
+    def test_title_content(self):
+        todo = Todo.objects.get(id=1)
+        expected_object_name = f'{todo.title}'
+        self.assertEquals(expected_object_name,'first todo')
+
+    def test_description_content(self):
+        todo = Todo.objects.get(id=2)
+        expected_object_description = f'{todo.description}'
+        self.assertEquals(expected_object_description,'a description here')
+
+
+--------------------------------------------------------------
+
+(django1) C:\Users\yoni shavat\todo_api>python manage.py test
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.003s
+
+OK
+Destroying test database for alias 'default'...
+(django1) C:\Users\yoni shavat\todo_api>
+
+(django1) C:\Users\yoni shavat\todo_api>pip install djangorestframework
+Collecting djangorestframework
+  Using cached https://files.pythonhosted.org/packages/1b/fe/fcebec2a98fbd1548da1c12ce8d7f634a02a9cce350833fa227a625ec624/djangorestframework-3.9.4-py2.py3-none-any.whl
+Installing collected packages: djangorestframework
+Successfully installed djangorestframework-3.9.4
+
+(django1) C:\Users\yoni shavat\todo_api>
+
+#adding REST_FRAMEWORK to settings { todo_api/todo_api/settings.py  } #
+--------------------------------------------------------------
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    'rest_framework',
+
+    'todos',
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
+--------------------------------------------------------------
+
+#adding new url for our Todo app { todo_api/urls.py  } #
+--------------------------------------------------------------
+from django.contrib import admin
+from django.urls import include, path
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/', include('todos.urls')),
+]
+--------------------------------------------------------------
+
+#creating new urls file for our Todo app { todo_api/todos/urls.py  } #
+--------------------------------------------------------------
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path('', views.ListTodo.as_view()),
+    path('<int:pk>/', views.DetailTodo.as_view()),
+]
+--------------------------------------------------------------
+
+#create a new serializers.py file in our todos app. { todo_api/todos/serializers.py  } #
+--------------------------------------------------------------
+from rest_framework import serializers
+from .models import Todo
+
+
+class TodoSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'id',
+            'title',
+            'description',
+        )
+        model = Todo
+--------------------------------------------------------------
+
+#create our views ListTodo & DetailTodo { todo_api/todos/views.py } #
+--------------------------------------------------------------
+from rest_framework import generics
+
+from .models import Todo
+from .serializers import TodoSerializer
+
+
+class ListTodo(generics.ListCreateAPIView):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+
+
+class DetailTodo(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+--------------------------------------------------------------
+
+(django1) C:\Users\yoni shavat\todo_api>pip install django-cors-headers
+Collecting django-cors-headers
+  Downloading https://files.pythonhosted.org/packages/07/10/14e9a34fed4f4c692a2863ae1e3591de56acb70295100aa9db89fc32bd92/django_cors_headers-3.0.2-py2.py3-none-any.whl
+Requirement already satisfied: Django>=1.11 in c:\users\yonish~1\envs\django1\lib\site-packages (from django-cors-headers) (2.0)
+Requirement already satisfied: pytz in c:\users\yonish~1\envs\django1\lib\site-packages (from Django>=1.11->django-cors-headers) (2018.4)
+Installing collected packages: django-cors-headers
+Successfully installed django-cors-headers-3.0.2
+
+(django1) C:\Users\yoni shavat\todo_api>
+
+#add corsheaders to our settings { todo_api/settings.py } #
+--------------------------------------------------------------
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    'rest_framework',
+    'corsheaders', # new
+
+    'todos',
+]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # new
+    'django.middleware.common.CommonMiddleware', # new
+    'django.middleware.security.SecurityMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CORS_ORIGIN_WHITELIST = [
+
+    "http://localhost:3000",
+]
+--------------------------------------------------------------
+
+#create-react-app frontend
+--------------------------------------
+(django1) C:\Users\yoni shavat\todo_api>create-react-app frontend
+
+Creating a new React app in C:\Users\yoni shavat\todo_api\frontend.
+
+Installing packages. This might take a couple of minutes.
+Installing react, react-dom, and react-scripts...
+
+
+> core-js@2.6.9 postinstall C:\Users\yoni shavat\todo_api\frontend\node_modules\babel-runtime\node_modules\core-js
+> node scripts/postinstall || echo "ignore"
+
+
+> core-js-pure@3.1.3 postinstall C:\Users\yoni shavat\todo_api\frontend\node_modules\core-js-pure
+> node scripts/postinstall || echo "ignore"
+
++ react@16.8.6
++ react-dom@16.8.6
++ react-scripts@3.0.1
+added 1404 packages from 727 contributors and audited 888973 packages in 507.824s
+found 0 vulnerabilities
+
+
+Initialized a git repository.
+
+Success! Created frontend at C:\Users\yoni shavat\todo_api\frontend
+Inside that directory, you can run several commands:
+
+  npm start
+    Starts the development server.
+
+  npm run build
+    Bundles the app into static files for production.
+
+  npm test
+    Starts the test runner.
+
+  npm run eject
+    Removes this tool and copies build dependencies, configuration files
+    and scripts into the app directory. If you do this, you can’t go back!
+
+We suggest that you begin by typing:
+
+  cd frontend
+  npm start
+
+Happy hacking!
+
+(django1) C:\Users\yoni shavat\todo_api>
+(django1) C:\Users\yoni shavat\todo_api>cd frontend
+
+(django1) C:\Users\yoni shavat\todo_api\frontend>npm start
+
+> frontend@0.1.0 start C:\Users\yoni shavat\todo_api\frontend
+> react-scripts start
+Starting the development server...
+Compiled successfully!
+
+You can now view frontend in the browser.
+
+  Local:            http://localhost:3000/
+  On Your Network:  http://192.168.1.6:3000/
+
+Note that the development build is not optimized.
+To create a production build, use npm run build.
+Compiling...
+Compiled successfully!
+
+
+#Modifed App.js React file with static content (like in our db) { todo_api/frontend/src/App.js } #
+--------------------------------------------------------------
+import React, { Component } from 'react';
+
+const list = [
+  {
+    'id': 1,
+    'title': '1st Item',
+    'description': 'Description here.'
+  },
+  {
+    'id': 2,
+    'title': '2nd Item',
+    'description': 'Another description here.'
+  },
+  {
+    'id': 3,
+    'title': '3rd Item',
+    'description': 'Third description here.'
+  }
+];
+
+class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { list };
+  }
+
+  render() {
+    return (
+      <div>
+        {this.state.list.map(item => (
+          <div>
+            <h1>{item.title}</h1>
+            <span>{item.description}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+}
+
+export default App;
+--------------------------------------------------------------
+
+##################################################################################################################
+#----------------------------------------------------------------------------------------------------------------#
+#	DRF + React												 #
+#	Now let’s hook into our DRF API for real. Our endpoints are at the local host of http://127.0.0.1:8000/. #
+#----------------------------------------------------------------------------------------------------------------#
+##################################################################################################################
+
+
+
+#Modifed **AGIN** App.js React file with static content (like in our db) { todo_api/frontend/src/App.js } #
+------------------------------------------------------------------------------------------------------------
+
+// App.js
+import React, { Component } from 'react';
+
+class App extends Component {
+  state = {
+    todos: []
+  };
+
+  async componentDidMount() {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/');
+      const todos = await res.json();
+      this.setState({
+        todos
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  render() {
+    return (
+      <div>
+        {this.state.todos.map(item => (
+          <div key={item.id}>
+            <h1>{item.title}</h1>
+            <span>{item.description}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+}
+
+export default App;
+-----------------------------------------------------------------------------------------------------
+
+If you look again at http://localhost:3000/ React has automatically updated the page for us.
+NOTE: YOU NEED TO START BOUTH SERVERS REACT AND DJANGO
